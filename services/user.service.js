@@ -1,5 +1,6 @@
 const User = require("../models/user.model");
 const bcrypt = require("bcrypt");
+const tokenService = require("../jwt/token.service");
 
 class UserService{
     async signup(name, email, password){
@@ -9,7 +10,9 @@ class UserService{
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const user = await User.create({name, email, password: hashedPassword});
-        return user;
+        const userWithoutPassword = user.toObject();
+        delete userWithoutPassword.password;
+        return userWithoutPassword;
     }   
     async getAllUsers(){
         const users = await User.find({isActive: true});
@@ -46,17 +49,17 @@ class UserService{
         return user;
     }
 
-    async loginUser(email, password ){
+    async login(email, password ){
         const user = await User.findOne({email}).select("+password");
         if(!user || !user.isActive){
-            throw new Error("User not found");
+            throw new Error("Invalid credentials");
         }
         const isPasswordValid = await bcrypt.compare(password, user.password);
-        if(!isMatch){
-            throw new Error("Invalid password");
+        if(!isPasswordValid){
+            throw new Error("Invalid credentials");
         }
         const payload = {
-            id: user_id,
+            id: user._id,
             email: user.email,
             isActive: user.isActive,
         };

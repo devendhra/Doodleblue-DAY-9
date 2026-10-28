@@ -7,5 +7,6 @@ router.get('/all', userController.getAllUsers);
 router.get('/:id', userController.getUserById);
 router.put('/update/:id', userController.updateUser);
 router.delete('/soft-delete/:id', userController.softDeleteUser);
+router.post('/login', userController.login);
 
 module.exports = router;
