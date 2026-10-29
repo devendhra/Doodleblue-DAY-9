@@ -17,11 +17,15 @@ const userSchema = new mongoose.Schema(
         password: {
             type: String, 
             required: [true, "Password is required"],
-            select: false
+            select: true
         },
         isActive: {
             type: Boolean,
             default: true,
+        },
+        profile: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "UserProfile",
         },
     },
     {

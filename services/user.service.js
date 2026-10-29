@@ -1,6 +1,8 @@
 const User = require("../models/user.model");
+const UserProfile = require("../models/user.profile.model");
 const bcrypt = require("bcrypt");
 const tokenService = require("../jwt/token.service");
+const mongoose = require("mongoose");
 
 class UserService{
     async signup(name, email, password){
@@ -15,8 +17,23 @@ class UserService{
         return userWithoutPassword;
     }   
     async getAllUsers(){
-        const users = await User.find({isActive: true});
+        const users = await User.find({isActive: true});    
         return users;
+    }
+
+    async getAllUserProfiles(){
+        const users = await User.find({isActive: true});
+        const userids = users.map(user => user._id);
+        const userProfiles = await UserProfile.find({user: {$in: userids}});
+
+        const userWithProfiles = users.map(user => {
+            const profile = userProfiles.find((profile) => profile.user.toString() === user._id.toString());
+            return {
+                ...user.toObject(),
+                profile: profile || null
+            };
+        });
+        return userWithProfiles;
     }
 
     async getUserById(id){
@@ -51,11 +68,14 @@ class UserService{
 
     async login(email, password ){
         const user = await User.findOne({email}).select("+password");
-        if(!user || !user.isActive){
-            throw new Error("Invalid credentials");
+        if(!user){
+            throw new Error("User not found");
         }
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if(!isPasswordValid){
+        if(!user.isActive){
+            throw new Error("User is not active");
+        }
+        const isMatch = await bcrypt.compare(password, user.password);
+        if(!isMatch){
             throw new Error("Invalid credentials");
         }
         const payload = {
@@ -67,6 +87,34 @@ class UserService{
         const userWithoutPassword = user.toObject();
         delete userWithoutPassword.password;
         return { user: userWithoutPassword, token};
+    }
+
+    async addUserProfile(userId, profileData){
+        if(!mongoose.isValidObjectId(userId)){
+            throw new Error("Invalid user ID");
+        }
+
+        const user = await User.findById(userId);
+        
+        if(!user){
+            throw new Error("User not found");
+        }
+        let dob = profileData.dob;
+        if(typeof dob === "string" && /^\d{2}-\d{2}-\d{4}$/.test(dob)){
+            const [day, month, year] = dob.split("-");
+            dob = `${year}-${month}-${day}`;
+        }
+        const userProfile = await UserProfile.create({
+            user:user._id,
+            age: profileData.age,
+            dob,
+            bio: profileData.bio,
+            gender: profileData.gender,
+        });
+        user.profile = userProfile._id;
+        await user.save();
+
+        return userProfile;
     }
 }
 

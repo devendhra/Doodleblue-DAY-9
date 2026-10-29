@@ -23,6 +23,15 @@ class UserController {
         }
     }
 
+    async getAllUserProfiles(req, res) {
+        try{
+            const userProfiles = await UserService.getAllUserProfiles();
+            return res.status(200).json({message:"User profiles fetched successfully", data: userProfiles});
+        } catch (error) {
+            return res.status(500).json({message:error.message});
+        }
+    }
+
     async getUserById(req, res) {
         try{
             const { id } = req.params;
@@ -77,6 +86,24 @@ class UserController {
         }
     }
 
+    async addUserProfile(req, res) {
+        try{
+            const userId = req.user.id;
+            const { age, dob, bio, gender } = req.body;
+
+            if(!userId) {
+                return res.status(400).json({message:"User ID is required"});
+            }
+
+            const newUserprofile = await UserService.addUserProfile(userId, {age, dob, bio, gender});
+            res.status(201).json({message:"User profile added successfully", data: newUserprofile});
+        } catch (error) {
+            if(error.code === 11000) {
+                return res.status(409).json({message:"User profile already exists"});
+            }
+            return res.status(500).json({message:error.message});
+        }
+    }
 }   
 
 module.exports = new UserController();
